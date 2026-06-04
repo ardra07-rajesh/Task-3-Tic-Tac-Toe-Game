@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tic-Tac-Toe</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f2040 100%);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #f1f5f9;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      padding: 2rem 1.5rem;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      margin-bottom: 1.6rem;
+      color: #e2e8f0;
+    }
+
+    h1 span.x { color: #60a5fa; }
+    h1 span.o { color: #34d399; }
+
+    /* Scoreboard */
+    .scoreboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+    }
+
+    .score-card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 12px 8px;
+      text-align: center;
+    }
+
+    .score-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+
+    .score-val {
+      font-size: 26px;
+      font-weight: 700;
+    }
+
+    #sx { color: #60a5fa; }
+    #sd { color: #94a3b8; }
+    #so { color: #34d399; }
+
+    /* Mode buttons */
+    .mode-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 1.3rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .mode-btn {
+      padding: 7px 16px;
+      font-size: 13px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.05);
+      color: #94a3b8;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .mode-btn:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+
+    .mode-btn.active {
+      background: rgba(96,165,250,0.2);
+      color: #93c5fd;
+      border-color: #3b82f6;
+      font-weight: 600;
+    }
+
+    /* Status bar */
+    .status-bar {
+      text-align: center;
+      font-size: 16px;
+      color: #94a3b8;
+      margin-bottom: 1.2rem;
+      min-height: 26px;
+    }
+
+    .status-bar .highlight {
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .status-bar .highlight.x { color: #60a5fa; }
+    .status-bar .highlight.o { color: #34d399; }
+    .status-bar .highlight.win { color: #f59e0b; }
+
+    /* Board */
+    .board-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      position: relative;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      outline: none;
+      position: relative;
+      transition: background 0.14s;
+      border-radius: 0;
+    }
+
+    .cell:hover:not(.taken) {
+      background: rgba(255,255,255,0.05);
+    }
+
+    /* Grid lines */
+    .gl {
+      position: absolute;
+      background: rgba(255,255,255,0.18);
+      border-radius: 2px;
+    }
+
+    .vl1 { width: 2px; height: 100%; left: 100px; top: 0; }
+    .vl2 { width: 2px; height: 100%; left: 200px; top: 0; }
+    .hl1 { height: 2px; width: 100%; top: 100px; left: 0; }
+    .hl2 { height: 2px; width: 100%; top: 200px; left: 0; }
+
+    /* Win line */
+    .win-line {
+      position: absolute;
+      background: #f59e0b;
+      border-radius: 3px;
+      height: 4px;
+      transform-origin: 0 50%;
+      pointer-events: none;
+    }
+
+    /* SVG markers */
+    .cell svg { width: 58px; height: 58px; }
+
+    .mark-x {
+      fill: none;
+      stroke: #60a5fa;
+      stroke-width: 6;
+      stroke-linecap: round;
+    }
+
+    .mark-o {
+      fill: none;
+      stroke: #34d399;
+      stroke-width: 6;
+    }
+
+    /* Winner pulse */
+    .cell.winner { animation: pulse 0.5s ease; }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.14); }
+    }
+
+    /* Draw animation */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    .board.shake { animation: shake 0.4s ease; }
+
+    /* Action buttons */
+    .actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .btn {
+      padding: 10px 26px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.07);
+      color: #e2e8f0;
+      cursor: pointer;
+      transition: all 0.16s;
+      letter-spacing: 0.02em;
+    }
+
+    .btn:hover { background: rgba(255,255,255,0.12); }
+
+    .btn.primary {
+      background: #1d4ed8;
+      border-color: #3b82f6;
+      color: #fff;
+    }
+
+    .btn.primary:hover { background: #1e40af; }
+
+    /* Thinking indicator */
+    .thinking {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #34d399;
+      margin-left: 6px;
+      animation: blink 0.7s infinite alternate;
+    }
+
+    @keyframes blink {
+      from { opacity: 1; }
+      to { opacity: 0.2; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1><span class="x">X</span> Tic-Tac-Toe <span class="o">O</span></h1>
+
+  <div class="scoreboard">
+    <div class="score-card">
+      <div class="score-label">X Wins</div>
+      <div class="score-val" id="sx">0</div>
+    </div>
+    <div class="score-card">
+      <div class="score-label">Draws</div>
+      <div class="score-val" id="sd">0</div>
+    </div>
+    <div class="score-card">
+      <div class="score-label">O Wins</div>
+      <div class="score-val" id="so">0</div>
+    </div>
+  </div>
+
+  <div class="mode-row">
+    <button class="mode-btn active" id="m2p">2 Players</button>
+    <button class="mode-btn" id="measy">vs AI — Easy</button>
+    <button class="mode-btn" id="mhard">vs AI — Hard</button>
+  </div>
+
+  <div class="status-bar" id="status"></div>
+
+  <div class="board-wrap">
+    <div class="board" id="board">
+      <div class="gl vl1"></div>
+      <div class="gl vl2"></div>
+      <div class="gl hl1"></div>
+      <div class="gl hl2"></div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn primary" id="newgame">New Game</button>
+    <button class="btn" id="resetall">Reset Scores</button>
+  </div>
+</div>
+
+<script>
+  const WINS = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  let board, cur, over, mode;
+  let scores = { X: 0, O: 0, D: 0 };
+
+  function init() {
+    board = Array(9).fill(null);
+    cur = 'X';
+    over = false;
+    mode = document.querySelector('.mode-btn.active').id;
+    renderBoard();
+    setStatus();
+    removeWinLine();
+  }
+
+  function svgX() {
+    return `<svg viewBox="0 0 58 58">
+      <line class="mark-x" x1="12" y1="12" x2="46" y2="46"/>
+      <line class="mark-x" x1="46" y1="12" x2="12" y2="46"/>
+    </svg>`;
+  }
+
+  function svgO() {
+    return `<svg viewBox="0 0 58 58">
+      <circle class="mark-o" cx="29" cy="29" r="18"/>
+    </svg>`;
+  }
+
+  function renderBoard() {
+    const b = document.getElementById('board');
+    const preserved = b.querySelectorAll('.gl, .win-line');
+    b.innerHTML = '';
+    preserved.forEach(el => b.appendChild(el));
+
+    for (let i = 0; i < 9; i++) {
+      const cell = document.createElement('button');
+      cell.className = 'cell' + (board[i] ? ' taken' : '');
+      if (board[i] === 'X') cell.innerHTML = svgX();
+      else if (board[i] === 'O') cell.innerHTML = svgO();
+      cell.addEventListener('click', () => handleClick(i));
+      b.appendChild(cell);
+    }
+  }
+
+  function handleClick(i) {
+    if (over || board[i]) return;
+    if (mode !== 'm2p' && cur === 'O') return;
+    place(i);
+    if (!over && mode !== 'm2p') {
+      showThinking();
+      const delay = mode === 'measy' ? 400 : 250;
+      setTimeout(() => { hideThinking(); aiMove(); }, delay);
+    }
+  }
+
+  function place(i) {
+    board[i] = cur;
+    renderBoard();
+    const win = checkWin(board);
+    if (win) { endGame(win, cur); return; }
+    if (board.every(Boolean)) { endGame(null, null); return; }
+    cur = cur === 'X' ? 'O' : 'X';
+    setStatus();
+  }
+
+  function aiMove() {
+    if (over) return;
+    let idx;
+    if (mode === 'measy') {
+      const empty = board.map((v, i) => v === null ? i : -1).filter(i => i >= 0);
+      idx = empty[Math.floor(Math.random() * empty.length)];
+    } else {
+      idx = minimax(board.slice(), 'O').idx;
+    }
+    place(idx);
+  }
+
+  function minimax(b, player, depth = 0) {
+    const win = checkWin(b);
+    if (win) return { score: player === 'O' ? depth - 10 : 10 - depth };
+    if (b.every(Boolean)) return { score: 0 };
+    const empty = b.map((v, i) => v === null ? i : -1).filter(i => i >= 0);
+    let best = player === 'O' ? { score: -Infinity } : { score: Infinity };
+    for (const i of empty) {
+      b[i] = player;
+      const res = minimax(b, player === 'O' ? 'X' : 'O', depth + 1);
+      b[i] = null;
+      if (player === 'O' ? res.score > best.score : res.score < best.score) {
+        best = { score: res.score, idx: i };
+      }
+    }
+    return best;
+  }
+
+  function checkWin(b) {
+    for (const combo of WINS) {
+      const [a, c, d] = combo;
+      if (b[a] && b[a] === b[c] && b[a] === b[d]) return combo;
+    }
+    return null;
+  }
+
+  function endGame(win, winner) {
+    over = true;
+    if (win) {
+      scores[winner]++;
+      updateScores();
+      drawWinLine(win);
+      const cells = document.querySelectorAll('.cell');
+      win.forEach(i => { if (cells[i]) cells[i].classList.add('winner'); });
+      const cls = winner === 'X' ? 'x' : 'o';
+      document.getElementById('status').innerHTML =
+        `<span class="highlight win">${winner} wins!</span> 🎉`;
+    } else {
+      scores.D++;
+      updateScores();
+      document.getElementById('status').innerHTML =
+        `<span class="highlight" style="color:#94a3b8">It's a draw!</span>`;
+      document.getElementById('board').classList.add('shake');
+      setTimeout(() => document.getElementById('board').classList.remove('shake'), 500);
+    }
+  }
+
+  function updateScores() {
+    document.getElementById('sx').textContent = scores.X;
+    document.getElementById('so').textContent = scores.O;
+    document.getElementById('sd').textContent = scores.D;
+  }
+
+  function setStatus(msg) {
+    const el = document.getElementById('status');
+    if (msg) { el.innerHTML = msg; return; }
+    const cls = cur === 'X' ? 'x' : 'o';
+    el.innerHTML = `<span class="highlight ${cls}">${cur}</span>'s turn`;
+  }
+
+  function removeWinLine() {
+    document.querySelectorAll('.win-line').forEach(l => l.remove());
+  }
+
+  function drawWinLine([a, , c]) {
+    const size = 100;
+    const row1 = Math.floor(a / 3), col1 = a % 3;
+    const row2 = Math.floor(c / 3), col2 = c % 3;
+    const x1 = col1 * size + size / 2;
+    const y1 = row1 * size + size / 2;
+    const x2 = col2 * size + size / 2;
+    const y2 = row2 * size + size / 2;
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+    const line = document.createElement('div');
+    line.className = 'win-line';
+    line.style.cssText = `width:${len}px;left:${x1}px;top:${y1}px;transform:rotate(${angle}deg) translateY(-50%);`;
+    document.getElementById('board').appendChild(line);
+  }
+
+  function showThinking() {
+    const el = document.getElementById('status');
+    el.innerHTML = `<span class="highlight o">O</span> is thinking<span class="thinking"></span>`;
+  }
+
+  function hideThinking() {}
+
+  document.getElementById('newgame').addEventListener('click', init);
+
+  document.getElementById('resetall').addEventListener('click', () => {
+    scores = { X: 0, O: 0, D: 0 };
+    updateScores();
+    init();
+  });
+
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      init();
+    });
+  });
+
+  init();
+</script>
+</body>
+</html>
